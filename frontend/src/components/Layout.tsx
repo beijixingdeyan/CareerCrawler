@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
-import { GraduationCap, LayoutDashboard, Briefcase, Building2, LineChart, Sparkles, Info } from 'lucide-react'
+import { GraduationCap, LayoutDashboard, Briefcase, Building2, LineChart, Sparkles, Info, Calendar, Users } from 'lucide-react'
 
 const nav = [
   { to: '/', label: '数据大屏', icon: LayoutDashboard },
+  { to: '/careers', label: '宣讲会 500', icon: Calendar },
+  { to: '/jobfairs', label: '双选会 64/806', icon: Users },
   { to: '/jobs', label: '岗位广场', icon: Briefcase },
   { to: '/companies', label: '企业库', icon: Building2 },
   { to: '/analysis', label: '趋势分析', icon: LineChart },
