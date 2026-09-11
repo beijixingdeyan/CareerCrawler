@@ -93,12 +93,28 @@ def enrich_one(c):
             rr = requests.get(url, headers=H, timeout=15)
             rr.encoding = "utf-8"
             soup = BeautifulSoup(rr.text, "lxml")
-            text = soup.get_text(separator="\n", strip=True)
             intro = ""
-            if "企业简介" in text:
-                idx = text.index("企业简介")
-                intro = text[idx:idx+2000]
-            comp_detail = {"company_id": cid, "detail_url": url, "intro_excerpt": intro[:2000], "full_text_excerpt": text[:4000]}
+            # try structured module first (单位简介/企业简介/公司简介)
+            for mod in soup.select(".detail-module"):
+                tit = mod.select_one(".dm-tit")
+                if tit and any(k in tit.get_text() for k in ["单位简介","企业简介","公司简介","公司介绍"]):
+                    txt = mod.get_text(separator="\n", strip=True).replace(tit.get_text(strip=True),"",1).strip()
+                    if len(txt) > 20:
+                        intro = txt
+                        break
+            if not intro:
+                text = soup.get_text(separator="\n", strip=True)
+                for key in ["单位简介","企业简介","公司简介"]:
+                    if key in text:
+                        idx = text.index(key)
+                        intro = text[idx+len(key):idx+len(key)+2000].strip("：: \n")
+                        break
+                else:
+                    text2 = soup.get_text(separator="\n", strip=True)
+                    intro = text2[:2000]
+            else:
+                text = soup.get_text(separator="\n", strip=True)
+            comp_detail = {"company_id": cid, "detail_url": url, "intro_excerpt": intro[:2000].strip(), "full_text_excerpt": text[:4000]}
             time.sleep(0.2)
         except Exception as e:
             comp_detail = {"company_id": cid, "error": str(e)}

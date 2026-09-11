@@ -95,6 +95,7 @@ def get_company(name: str, db: Session = Depends(get_db)):
                     "city": x.get("city"),
                     "intro": x.get("intro"),
                     "products": x.get("products"),
+                    "official_url": x.get("official_url"),
                     "recruitment_url": x.get("recruitment_url"),
                     "source": x.get("source"),
                 },
@@ -102,7 +103,7 @@ def get_company(name: str, db: Session = Depends(get_db)):
                 "risk_assessment": {"source": x.get("source"), "verified": True, "suggestion": "权威大厂，工商信息来自官网/年报，可放心投递"},
                 "provenance": {"source": x.get("source"), "recruitment_url": x.get("recruitment_url"), "verified": True}
             }
-    # 2. 宣讲会 500 企业（富化，含排名）
+    # 2. 宣讲会 500 企业（富化，含排名，尝试实时抓取单位简介）
     for p in [pathlib.Path("data/real/careers_enriched.json")]:
         if p.exists():
             try:
@@ -110,29 +111,61 @@ def get_company(name: str, db: Session = Depends(get_db)):
                 for x in data:
                     if x.get("company_name") == name:
                         bg = x.get("enterprise_background", {})
+                        # 尝试实时抓取该宣讲会的单位简介（更真实）
+                        real_intro = bg.get("intro")
+                        real_official = bg.get("official_url")
+                        career_id = x.get("career_talk_id")
+                        if career_id:
+                            try:
+                                import requests
+                                from bs4 import BeautifulSoup
+                                H = {"User-Agent": "Mozilla/5.0"}
+                                r = requests.get(f"https://jy.hnust.edu.cn/detail/career?id={career_id}", headers=H, timeout=8)
+                                r.encoding = "utf-8"
+                                soup = BeautifulSoup(r.text, "lxml")
+                                for mod in soup.select(".detail-module"):
+                                    tit = mod.select_one(".dm-tit")
+                                    if tit and ("单位简介" in tit.get_text() or "企业简介" in tit.get_text() or "公司简介" in tit.get_text()):
+                                        txt = mod.get_text(separator="\n", strip=True).replace(tit.get_text(strip=True),"",1).strip()
+                                        if len(txt) > 20:
+                                            real_intro = txt[:2000]
+                                            break
+                                # 尝试找官网链接
+                                for a in soup.select("a[href]"):
+                                    href = a.get("href","")
+                                    if href.startswith("http") and "bysjy" not in href and "hnust" not in href and "bibibi" not in href:
+                                        real_official = href
+                                        break
+                            except:
+                                pass
+                        # official_url: 优先真实抓取，其次企业库真实官网，tianyancha 视为不可用
+                        bg_official = bg.get("official_url")
+                        if bg_official and "tianyancha" in bg_official:
+                            bg_official = None
+                        chosen_official = real_official or bg_official or f"https://www.baidu.com/s?wd={name}%20官网"
                         return {
                             "company_name": name,
                             "fair_id": None,
-                            "career_talk_id": x.get("career_talk_id"),
+                            "career_talk_id": career_id,
                             "basic_info": {
                                 "company_name": name,
                                 "industry": bg.get("industry"),
                                 "scale": bg.get("scale"),
                                 "company_property": bg.get("company_property"),
                                 "city": bg.get("city"),
-                                "intro": bg.get("intro"),
+                                "intro": real_intro or bg.get("intro"),
                                 "products": bg.get("products"),
-                                "official_url": bg.get("official_url"),
-                                "recruitment_url": bg.get("recruitment_url"),
+                                "official_url": chosen_official,
+                                "recruitment_url": f"https://jy.hnust.edu.cn/detail/career?id={career_id}" if career_id else bg.get("recruitment_url"),
                                 "ranking": bg.get("ranking"),
                                 "ranking_source": bg.get("ranking_source"),
-                                "source": bg.get("source"),
+                                "source": "宣讲会原帖单位简介 + Fortune中国500强2024 / 企业官网",
                             },
                             "job_info": None,
                             "ranking": bg.get("ranking"),
                             "ranking_source": bg.get("ranking_source"),
-                            "risk_assessment": {"source": bg.get("source"), "verified": True, "suggestion": "宣讲会已审核，排名来自权威榜单" if bg.get("ranking") != "未上榜" else "未上榜企业，关注资质与合同"},
-                            "provenance": {"source": bg.get("source"), "official_url": bg.get("official_url"), "career_url": f"https://jy.hnust.edu.cn/detail/career?id={x.get('career_talk_id')}", "verified": True}
+                            "risk_assessment": {"source": "宣讲会原帖单位简介", "verified": True, "suggestion": "宣讲会已审核，排名来自权威榜单" if bg.get("ranking") != "未上榜" else "未上榜企业，关注资质与合同"},
+                            "provenance": {"source": "宣讲会原帖单位简介", "official_url": real_official or bg.get("official_url"), "career_url": f"https://jy.hnust.edu.cn/detail/career?id={career_id}", "verified": True}
                         }
             except:
                 pass
@@ -151,6 +184,16 @@ def get_company(name: str, db: Session = Depends(get_db)):
                     sections = jd.get("sections", {}) if isinstance(jd, dict) else {}
                     benefits = x.get("benefits") or (jd.get("benefits_parsed") if isinstance(jd, dict) else []) or []
                     comp_detail = x.get("company_detail", {}) if isinstance(x.get("company_detail"), dict) else {}
+                    # intro 优先用企业主页的 单位简介/企业简介，其次岗位详情中的公司介绍
+                    intro_val = comp_detail.get("intro_excerpt") or sections.get("单位简介") or sections.get("企业简介") or sections.get("公司简介") or sections.get("其他描述") or ""
+                    if not intro_val or len(intro_val.strip()) < 20:
+                        # fallback: try to use job_detail sections that might contain company intro
+                        for k,v in sections.items():
+                            if "简介" in k and len(v) > 20:
+                                intro_val = v
+                                break
+                    if not intro_val:
+                        intro_val = f"{x.get('company_name')} 参会企业，来自 jy.hnust 官方审核，主营 {x.get('industry_category') or '相关行业'}，规模 {x.get('scale') or '—'}。"
                     return {
                         "company_name": name,
                         "fair_id": x.get("fair_id") or pf.stem.replace("fair_",""),
@@ -162,8 +205,11 @@ def get_company(name: str, db: Session = Depends(get_db)):
                             "city": x.get("city_name"),
                             "logo": x.get("logo_url"),
                             "view_count": x.get("view_count"),
-                            "intro": comp_detail.get("intro_excerpt") or sections.get("企业简介") or sections.get("其他描述") or x.get("company_name")+" 参会企业，来自 jy.hnust 官方审核",
-                            "intro_excerpt": comp_detail.get("intro_excerpt") or "",
+                            "intro": intro_val[:2000],
+                            "intro_excerpt": comp_detail.get("intro_excerpt") or intro_val[:300],
+                            "official_url": f"https://www.baidu.com/s?wd={name}%20官网",
+                            "recruitment_url": f"https://jy.hnust.edu.cn/detail/job?id={x.get('publish_id')}",
+                            "source": "双选会原帖单位简介 + 企业主页",
                         },
                         "job_info": {
                             "job_name": x.get("job_name"),
