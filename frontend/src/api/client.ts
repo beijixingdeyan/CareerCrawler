@@ -36,4 +36,8 @@ export type Dashboard = {
   location_dist: Record<string, number>
   trend: { date: string; count: number }[]
   cs_insight: { message: string; focus_skills: string[]; hot_cities: string[] }
+  real_counts?: { careers: number; jobfairs: number; jobs: number }
+  total_careers?: number
+  total_jobfairs?: number
+  total_jobs_real?: number
 }

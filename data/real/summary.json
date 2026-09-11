@@ -1,0 +1,18 @@
+{
+  "crawl_time": "2026-09-11T20:15:00",
+  "careers_total_api": 500,
+  "careers_fetched": 500,
+  "jobfairs_total_api": 806,
+  "jobfairs_fetched": 806,
+  "jobfairs_active_2026": 248,
+  "jobs_total_api": 13411,
+  "jobs_fetched": 695,
+  "jobs_official": 500,
+  "jobs_intern": 195,
+  "sources": {
+    "careers_api": "https://jy.hnust.edu.cn/module/getcareers",
+    "jobfairs_api": "https://jy.hnust.edu.cn/module/getjobfairs",
+    "jobs_api": "https://jy.hnust.edu.cn/module/getjobs"
+  },
+  "note": "All 500 careers and 806 jobfairs fully fetched via official JSON APIs (count 50, verified via Chrome DevTools). Jobs API caps at 500 per is_practice type, fetched 500 official + 195 intern = 695 real jobs (is_total 13411 but window max 500). User-reported 64 jobfairs corresponds to filtered active subset (2026-09 has 33, 2026 full 248); raw historical total 806 is accurate. Zero mock."
+}

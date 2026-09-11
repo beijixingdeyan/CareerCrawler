@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 import pathlib
 
 from .database import init_db
-from .routers import jobs, companies, analysis, recommend
+from .routers import jobs, companies, analysis, recommend, careers, jobfairs
 
 app = FastAPI(
     title="CareerCrawler API",
@@ -27,6 +27,8 @@ app.include_router(jobs.router)
 app.include_router(companies.router)
 app.include_router(analysis.router)
 app.include_router(recommend.router)
+app.include_router(careers.router)
+app.include_router(jobfairs.router)
 
 @app.get("/api/health")
 def health():

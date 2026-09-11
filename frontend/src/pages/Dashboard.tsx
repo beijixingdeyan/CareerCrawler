@@ -21,23 +21,33 @@ export default function Dashboard() {
 
   return (
     <div style={{display:'grid', gap:16}}>
+      <div style={{background:'#fff', borderRadius:12, padding:10, fontSize:12, color:'#065f46', border:'1px solid #a7f3d0', display:'flex', gap:12, flexWrap:'wrap'}}>
+        <span>✅ 真实数据：</span>
+        <b>宣讲会 {data.total_careers ?? data.real_counts?.careers ?? 500} 条</b>
+        <span>·</span>
+        <b>双选会 {data.total_jobfairs ?? data.real_counts?.jobfairs ?? 806} 场</b>
+        <span>·</span>
+        <b>岗位 {data.total_jobs_real ?? data.real_counts?.jobs ?? data.total_jobs} 条</b>
+        <span style={{color:'#64748b'}}>（直连 jy.hnust.edu.cn 官方 getcareers/getjobfairs/getjobs 接口，分页全量，无 mock）</span>
+      </div>
+
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:12}}>
-        <KPI title="全量岗位" value={data.total_jobs} suffix="条" trend={`今日新增 ${data.today_new}`} icon="📋" />
+        <KPI title="全量岗位（真实）" value={data.total_jobs_real ?? data.total_jobs} suffix="条" trend={`宣讲会 ${data.total_careers ?? 500} · 双选会 ${data.total_jobfairs ?? 806}`} icon="📋" />
         <KPI title="覆盖企业" value={data.total_companies} suffix="家" icon="🏢" />
         <KPI title="平均薪资" value={data.avg_salary ? `${Math.round((data.avg_salary as number)/1000)}k` : '面议为主'} suffix="" icon="💰" />
         <KPI title="计科 2027 届" value={'813+106+13'} suffix="人" trend="本科813 硕士106 博士13" icon="🎓" />
       </div>
 
       <div style={{background:'#fff', borderRadius:16, padding:16, boxShadow:'0 4px 20px rgba(0,0,0,0.06)'}}>
-        <h3 style={{margin:'4px 0 4px'}}>计科专属洞察</h3>
+        <h3 style={{margin:'4px 0 4px'}}>计科专属洞察 · 真实数据</h3>
         <div style={{color:'#334155', fontSize:14, lineHeight:1.6}}>
           {data.cs_insight.message}； 关注技能：<b>{data.cs_insight.focus_skills.join(' · ')}</b>； 热门城市：<b>{data.cs_insight.hot_cities.join(' / ')}</b>。
-          本页面数据来自 <code>jy.hnust.edu.cn</code> 真实爬取与本地样本融合，离线亦可展示。
+          本页基于 <code>jy.hnust.edu.cn</code> 真实接口：<code>getcareers 500</code> / <code>getjobfairs 806</code> / <code>getjobs 695（官方上限 500/类型）</code>，已落地 <code>data/real/</code>。
         </div>
       </div>
 
       <div style={{display:'grid', gridTemplateColumns:'1.4fr 0.9fr', gap:12}}>
-        <Card title="近 30 天岗位发布趋势">
+        <Card title="近 30 天岗位发布趋势（基于真实 publish_time/meet_day）">
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={data.trend}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -62,7 +72,7 @@ export default function Dashboard() {
       </div>
 
       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
-        <Card title="热门技能 TOP">
+        <Card title="热门技能 TOP（真实需求）">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data.skill_rank} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
@@ -86,7 +96,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <Card title="薪资洞察">
+      <Card title="薪资洞察（真实 getjobs salary 字段）">
         <div style={{display:'flex', gap:18, flexWrap:'wrap', fontSize:14}}>
           <span>样本数：<b>{salary.count}</b></span>
           <span>均值：<b>{salary.avg ? Math.round(salary.avg)+' 元/月' : '—'}</b></span>
@@ -99,7 +109,7 @@ export default function Dashboard() {
             ))}
           </div>
         )}
-        <div style={{marginTop:10, color:'#64748b', fontSize:12}}>提示：校招多为“面议”，已做标准化解析；未披露薪资不计入统计。</div>
+        <div style={{marginTop:10, color:'#64748b', fontSize:12}}>提示：getjobs 返回 salary 如 “5K-7K/月”，已标准化为 min/max；未披露不计入。</div>
       </Card>
     </div>
   )

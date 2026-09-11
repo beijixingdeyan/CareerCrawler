@@ -10,7 +10,6 @@ router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 def _load_jobs(db: Session):
     jobs_db = db.query(Job).all()
     if jobs_db:
-        # convert to dict like sample
         out=[]
         for j in jobs_db:
             out.append({
@@ -27,25 +26,65 @@ def _load_jobs(db: Session):
                 "source_type": j.source_type,
             })
         return out
-    # fallback samples
-    for p in [pathlib.Path("data/samples/crawl_latest.json"), pathlib.Path("data/samples/hnust_sample.json")]:
+    #优先真实数据
+    for p in [pathlib.Path("data/real/jobs.json"), pathlib.Path("data/real/careers.json"), pathlib.Path("data/samples/crawl_latest.json"), pathlib.Path("data/samples/hnust_sample.json")]:
         if p.exists():
             try:
-                return json.loads(p.read_text(encoding="utf-8"))
+                data=json.loads(p.read_text(encoding="utf-8"))
+                # 若是 careers 格式，需映射 salary/location
+                norm=[]
+                for x in data[:2000]:
+                    title=x.get("title") or x.get("job_name") or x.get("meet_name")
+                    smin=x.get("salary_min")
+                    smax=x.get("salary_max")
+                    if not smin and x.get("salary"):
+                        import re
+                        m=re.search(r"(\d+)[Kk]\s*[-~]+\s*(\d+)[Kk]", x.get("salary"))
+                        if m: smin=int(m.group(1))*1000; smax=int(m.group(2))*1000
+                    norm.append({
+                        "title": title,
+                        "company_name": x.get("company_name"),
+                        "category": x.get("category") or x.get("industry_category") or "其他",
+                        "skills": x.get("skills") or [],
+                        "salary_min": smin,
+                        "salary_max": smax,
+                        "location_raw": x.get("location") or x.get("city_name") or x.get("job_city"),
+                        "location_city": x.get("city_name") or x.get("job_city") or x.get("location_city"),
+                        "publish_date": x.get("publish_time") or x.get("meet_day") or x.get("publish_date"),
+                        "crawl_time": x.get("crawl_time"),
+                        "source_type": x.get("source_type"),
+                    })
+                return norm
             except: pass
     return []
+
+def _counts():
+    # 真实总数（用于大屏 KPI）
+    import json, pathlib
+    counts={}
+    for key, path in [("careers","data/real/careers.json"),("jobfairs","data/real/jobfairs.json"),("jobs","data/real/jobs.json")]:
+        p=pathlib.Path(path)
+        if p.exists():
+            try: counts[key]=len(json.loads(p.read_text(encoding="utf-8")))
+            except: counts[key]=0
+    return counts
 
 @router.get("/dashboard")
 def get_dashboard(db: Session = Depends(get_db)):
     jobs = _load_jobs(db)
     companies = db.query(Company).all()
     data = dashboard(jobs, companies)
-    # 针对计科专业的提示
     data["cs_insight"] = {
         "message": "计科 2027 届 813 人（软件139/信安129/物联网116/大数据131/计科298）+ 硕士106 + 博士13，主战场为 开发/算法/安全/大数据",
         "focus_skills": ["Java", "Python", "Vue/React", "SpringBoot", "MySQL", "Redis", "Docker", "机器学习"],
         "hot_cities": ["长沙", "深圳", "广州", "杭州", "武汉"],
     }
+    # 叠加真实总数
+    counts=_counts()
+    data["real_counts"] = counts
+    data["total_careers"] = counts.get("careers", 0)
+    data["total_jobfairs"] = counts.get("jobfairs", 0)
+    data["total_jobs_real"] = counts.get("jobs", 0)
     return data
 
 @router.get("/salary")

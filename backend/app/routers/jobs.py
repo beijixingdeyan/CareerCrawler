@@ -7,8 +7,10 @@ from ..models import Job
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
-# 辅助：若 DB 为空，尝试从 data/samples 加载
+# 辅助：若 DB 为空，尝试从 data/real 真实数据加载
 SAMPLE_PATHS = [
+    pathlib.Path("data/real/jobs.json"),
+    pathlib.Path("data/real/careers.json"),
     pathlib.Path("data/samples/crawl_latest.json"),
     pathlib.Path("../data/samples/crawl_latest.json"),
     pathlib.Path("data/samples/hnust_sample.json"),
@@ -97,29 +99,45 @@ def list_jobs(
         total = len(filtered)
         start = (page-1)*page_size
         items = filtered[start:start+page_size]
-        # 适配字段
+        # 适配字段（兼容真实 API 的多字段：careers 的 meet_name，jobs 的 job_name 等）
         norm = []
         for x in items:
+            # 真实数据可能使用不同字段名，统一映射
+            title = x.get("title") or x.get("job_name") or x.get("meet_name")
+            comp = x.get("company_name")
+            loc_city = x.get("location_city") or x.get("city_name") or x.get("job_city") or (x.get("location_normalized") or {}).get("city")
+            loc_raw = x.get("location") or x.get("location_raw") or x.get("address") or loc_city
+            sal_raw = x.get("salary_raw") or x.get("salary") or (x.get("salary_parsed") or {}).get("raw")
+            smin = x.get("salary_min")
+            smax = x.get("salary_max")
+            # 尝试从 salary 字符串解析如 "5K-7K/月"
+            if not smin and sal_raw:
+                import re
+                m = re.search(r"(\d+(?:\.\d+)?)\s*[Kk]\s*[-~至]+\s*(\d+(?:\.\d+)?)\s*[Kk]", sal_raw)
+                if m:
+                    smin = int(float(m.group(1))*1000)
+                    smax = int(float(m.group(2))*1000)
             norm.append({
-                "id": x.get("hash") or x.get("id") or x.get("detail_url","")[-12:],
-                "title": x.get("title"),
-                "company_name": x.get("company_name"),
-                "category": x.get("category"),
-                "job_type": x.get("source_type"),
-                "description": x.get("description"),
+                "id": x.get("hash") or x.get("id") or x.get("publish_id") or x.get("career_talk_id") or x.get("fair_id") or x.get("detail_url","")[-12:] or str(hash(title))[-8:],
+                "title": title,
+                "company_name": comp,
+                "category": x.get("category") or x.get("industry_category") or "其他",
+                "job_type": x.get("source_type") or ("careers" if x.get("career_talk_id") else "jobs"),
+                "description": x.get("description") or x.get("about_major") or x.get("professionals") or "",
                 "skills": x.get("skills") or [],
-                "salary_raw": x.get("salary_raw") or (x.get("salary_parsed") or {}).get("raw"),
-                "salary_min": (x.get("salary_parsed") or {}).get("min") or x.get("salary_min"),
-                "salary_max": (x.get("salary_parsed") or {}).get("max") or x.get("salary_max"),
-                "location_raw": x.get("location") or x.get("location_raw"),
-                "location_city": (x.get("location_normalized") or {}).get("city") or x.get("location_city"),
-                "source": x.get("source"),
+                "salary_raw": sal_raw,
+                "salary_min": (x.get("salary_parsed") or {}).get("min") or smin,
+                "salary_max": (x.get("salary_parsed") or {}).get("max") or smax,
+                "location_raw": loc_raw,
+                "location_city": loc_city,
+                "source": x.get("source") or "hnust",
                 "source_url": x.get("detail_url") or x.get("source_url"),
-                "source_type": x.get("source_type"),
-                "publish_date": x.get("publish_date"),
+                "source_type": x.get("source_type") or ("careers" if x.get("career_talk_id") else "jobs"),
+                "publish_date": x.get("publish_date") or x.get("publish_time") or x.get("meet_day"),
                 "crawl_time": x.get("crawl_time"),
             })
-        return {"total": total, "page": page, "page_size": page_size, "items": norm, "from": "sample"}
+        src = "real" if any("data/real" in str(p) for p in SAMPLE_PATHS if p.exists()) else "sample"
+        return {"total": total, "page": page, "page_size": page_size, "items": norm, "from": src}
 
     total = len(all_jobs)
     start = (page-1)*page_size
