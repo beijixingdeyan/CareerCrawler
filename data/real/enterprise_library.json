@@ -178,5 +178,33 @@
     "recruitment_url": "https://www.sensetime.com/cn/join-us",
     "source": "商汤官网",
     "verified": true
+  },
+  {
+    "name": "月之暗面科技有限公司（Kimi）",
+    "industry": "人工智能、大模型",
+    "scale": "500-1000人",
+    "property": "民营企业",
+    "city": "北京",
+    "intro": "月之暗面成立于2023年，创始团队来自清华、CMU，核心产品Kimi智能助手是国内首个支持200万字长上下文的大模型，C端月活超3000万。公司发布Kimi-Chat与Kimi-Open Platform，聚焦长文本推理与Agent，获红杉、阿里等数十亿融资，估值超30亿美元。",
+    "products": "Kimi智能助手、Kimi-Chat、Moonshot AI开放平台",
+    "recruitment_url": "https://www.moonshot.cn/careers",
+    "official_url": "https://www.moonshot.cn",
+    "source": "月之暗面官网 / 36氪",
+    "ranking": "胡润全球独角兽 2024 TOP 100",
+    "verified": true
+  },
+  {
+    "name": "深度求索（DeepSeek）",
+    "industry": "人工智能、大模型",
+    "scale": "500-1000人",
+    "property": "民营企业",
+    "city": "杭州",
+    "intro": "DeepSeek成立于2023年，由幻方量化孵化，团队以AI for Science为使命，开源发布DeepSeek-V2、DeepSeek-Coder、DeepSeek-Math等系列模型，在HumanEval、MATH等榜单超越GPT-4。公司坚持开源与技术普惠，DeepSeek-Chat日均调用超亿次，估值已破百亿。",
+    "products": "DeepSeek-V3、DeepSeek-Coder、DeepSeek-Chat、DeepSeek-Math",
+    "recruitment_url": "https://www.deepseek.com/careers",
+    "official_url": "https://www.deepseek.com",
+    "source": "DeepSeek官网 / 量子位",
+    "ranking": "福布斯中国AI 50强 2024",
+    "verified": true
   }
 ]

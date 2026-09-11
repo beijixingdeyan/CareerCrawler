@@ -51,10 +51,19 @@ export default function Careers(){
             {companyDetail._loading ? <div>加载中…</div> : (
               <>
                 <div style={{fontSize:13, lineHeight:1.6}}>
-                  <div>行业：{companyDetail.basic_info?.industry || '—'} · 规模：{companyDetail.basic_info?.scale || '—'} · 城市：{companyDetail.basic_info?.city || '—'}</div>
+                  <div style={{display:'flex', gap:8, flexWrap:'wrap', alignItems:'center'}}>
+                    <span>行业：{companyDetail.basic_info?.industry || '—'}</span>
+                    <span>规模：{companyDetail.basic_info?.scale || '—'}</span>
+                    <span>城市：{companyDetail.basic_info?.city || '—'}</span>
+                    {companyDetail.basic_info?.ranking && companyDetail.basic_info.ranking !== '未上榜' ? <span style={{background:'#fef3c7', color:'#92400e', padding:'2px 8px', borderRadius:999, fontSize:11, fontWeight:700}}>中国500强 #{companyDetail.basic_info.ranking} · {companyDetail.basic_info.ranking_source}</span> : <span style={{background:'#f1f5f9', padding:'2px 8px', borderRadius:999, fontSize:11}}>{companyDetail.basic_info?.ranking || '未上榜'} · {companyDetail.basic_info?.ranking_source || ''}</span>}
+                  </div>
                   <div style={{marginTop:8, background:'#f8fafc', padding:10, borderRadius:8, fontSize:12, whiteSpace:'pre-wrap'}}>{companyDetail.basic_info?.intro || companyDetail.basic_info?.intro_excerpt || '—'}</div>
                   {companyDetail.basic_info?.products && <div style={{fontSize:12, color:'#475569', marginTop:6}}>主营：{companyDetail.basic_info.products}</div>}
-                  {companyDetail.basic_info?.recruitment_url && <a href={companyDetail.basic_info.recruitment_url} target="_blank" style={{fontSize:12, color:'#1E55AF'}}>官方招聘页 →</a>}
+                  <div style={{marginTop:8, display:'flex', gap:8, flexWrap:'wrap'}}>
+                    {companyDetail.basic_info?.official_url && <a href={companyDetail.basic_info.official_url} target="_blank" style={{fontSize:12, color:'#fff', background:'#1E55AF', padding:'4px 10px', borderRadius:999, textDecoration:'none'}}>官网 →</a>}
+                    {companyDetail.basic_info?.recruitment_url && <a href={companyDetail.basic_info.recruitment_url} target="_blank" style={{fontSize:12, color:'#1E55AF', border:'1px solid #1E55AF', padding:'4px 10px', borderRadius:999, textDecoration:'none'}}>官方招聘页 →</a>}
+                  </div>
+                  {companyDetail.basic_info?.source && <div style={{marginTop:6, fontSize:11, color:'#94a3b8'}}>来源：{companyDetail.basic_info.source} · 已核验 ✅</div>}
                 </div>
                 {companyDetail.job_info && <div style={{background:'#f8fafc', padding:10, borderRadius:8}}><div style={{fontWeight:600}}>{companyDetail.job_info.job_name} · {companyDetail.job_info.salary}</div><div style={{fontSize:12, marginTop:6, whiteSpace:'pre-wrap'}}><b>要求：</b>{companyDetail.job_info.requirements?.slice(0,400) || '—'}</div><div style={{fontSize:12, marginTop:6}}><b>福利：</b>{companyDetail.job_info.benefits?.join(' / ') || '—'}</div></div>}
               </>

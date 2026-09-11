@@ -55,7 +55,7 @@ def list_companies(q: Optional[str] = None, db: Session = Depends(get_db)):
             for x in fair_matched:
                 if x["company_name"] not in names:
                     filtered.append({"name": x["company_name"], "industry": x.get("industry_category"), "scale": x.get("scale"), "city": x.get("city_name"), "intro": f"参会企业 · {x.get('job_name')} {x.get('salary')}", "recruitment_url": f"https://jy.hnust.edu.cn/detail/job?id={x.get('publish_id')}", "source": "jy.hnust 30003", "verified": True})
-        return [{"name": x["name"], "industry": x.get("industry"), "scale": x.get("scale"), "city": x.get("city"), "intro": (x.get("intro") or "")[:120], "recruitment_url": x.get("recruitment_url"), "source": x.get("source"), "verified": x.get("verified")} for x in filtered]
+        return [{"name": x["name"], "industry": x.get("industry"), "scale": x.get("scale"), "city": x.get("city"), "intro": (x.get("intro") or "")[:120], "recruitment_url": x.get("recruitment_url"), "official_url": x.get("official_url"), "ranking": x.get("ranking"), "ranking_source": x.get("ranking_source") or x.get("source"), "source": x.get("source"), "verified": x.get("verified")} for x in filtered]
 
     fair = _load_fair64()
     if fair:
@@ -102,7 +102,42 @@ def get_company(name: str, db: Session = Depends(get_db)):
                 "risk_assessment": {"source": x.get("source"), "verified": True, "suggestion": "权威大厂，工商信息来自官网/年报，可放心投递"},
                 "provenance": {"source": x.get("source"), "recruitment_url": x.get("recruitment_url"), "verified": True}
             }
-    # 2. 参会企业（所有 fair）
+    # 2. 宣讲会 500 企业（富化，含排名）
+    for p in [pathlib.Path("data/real/careers_enriched.json")]:
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                for x in data:
+                    if x.get("company_name") == name:
+                        bg = x.get("enterprise_background", {})
+                        return {
+                            "company_name": name,
+                            "fair_id": None,
+                            "career_talk_id": x.get("career_talk_id"),
+                            "basic_info": {
+                                "company_name": name,
+                                "industry": bg.get("industry"),
+                                "scale": bg.get("scale"),
+                                "company_property": bg.get("company_property"),
+                                "city": bg.get("city"),
+                                "intro": bg.get("intro"),
+                                "products": bg.get("products"),
+                                "official_url": bg.get("official_url"),
+                                "recruitment_url": bg.get("recruitment_url"),
+                                "ranking": bg.get("ranking"),
+                                "ranking_source": bg.get("ranking_source"),
+                                "source": bg.get("source"),
+                            },
+                            "job_info": None,
+                            "ranking": bg.get("ranking"),
+                            "ranking_source": bg.get("ranking_source"),
+                            "risk_assessment": {"source": bg.get("source"), "verified": True, "suggestion": "宣讲会已审核，排名来自权威榜单" if bg.get("ranking") != "未上榜" else "未上榜企业，关注资质与合同"},
+                            "provenance": {"source": bg.get("source"), "official_url": bg.get("official_url"), "career_url": f"https://jy.hnust.edu.cn/detail/career?id={x.get('career_talk_id')}", "verified": True}
+                        }
+            except:
+                pass
+
+    # 3. 参会企业（所有 fair）
     # 尝试所有 fair 文件
     fair_files = list(pathlib.Path("data/real").glob("fair_*.json")) + [pathlib.Path("data/real/fair30003_64.json")]
     for pf in fair_files:

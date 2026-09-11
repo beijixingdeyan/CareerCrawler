@@ -5,11 +5,10 @@ import json, pathlib
 router = APIRouter(prefix="/api/careers", tags=["careers"])
 
 def _load_careers():
-    for p in [pathlib.Path("data/real/careers.json"), pathlib.Path("data/real/careers_raw.json"), pathlib.Path("data/samples/crawl_latest.json")]:
+    for p in [pathlib.Path("data/real/careers_enriched.json"), pathlib.Path("data/real/careers.json"), pathlib.Path("data/real/careers_raw.json"), pathlib.Path("data/samples/crawl_latest.json")]:
         if p.exists():
             try:
                 data = json.loads(p.read_text(encoding="utf-8"))
-                # if raw format (contains career_talk_id), normalize already
                 return data
             except: pass
     return []
