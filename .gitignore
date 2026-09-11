@@ -1,0 +1,84 @@
+# 需求与隐私
+careercrawler_project.md
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+.env_venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+.build/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Frontend
+frontend/dist/
+frontend/node_modules/
+frontend/.vite/
+
+# Backend
+backend/__pycache__/
+backend/data/
+backend/*.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Crawler
+crawler/__pycache__/
+crawler/data/
+data/raw/
+data/cache/
+*.jsonl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# OS
+*.tmp
+*.temp
+
+# Secrets / tokens
+secrets.json
+config/private*.json
+credentials.json
+tianyancha_key.txt
+qichacha_key.txt
+
+# Logs
+logs/
+*.log
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Docker volumes
+pgdata/
+redisdata/
+esdata/
