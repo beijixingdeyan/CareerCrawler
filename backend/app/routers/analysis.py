@@ -37,10 +37,17 @@ def _load_jobs(db: Session):
                     title=x.get("title") or x.get("job_name") or x.get("meet_name")
                     smin=x.get("salary_min")
                     smax=x.get("salary_max")
-                    if not smin and x.get("salary"):
+                    # 统一转换为元（处理 5 -> 5000）
+                    try:
+                        if smin is not None and float(smin) < 1000: smin = float(smin)*1000
+                        if smax is not None and float(smax) < 1000: smax = float(smax)*1000
+                        if smin is not None: smin = int(smin)
+                        if smax is not None: smax = int(smax)
+                    except: pass
+                    if (not smin or not smax) and x.get("salary"):
                         import re
-                        m=re.search(r"(\d+)[Kk]\s*[-~]+\s*(\d+)[Kk]", x.get("salary"))
-                        if m: smin=int(m.group(1))*1000; smax=int(m.group(2))*1000
+                        m=re.search(r"(\d+(?:\.\d+)?)\s*[Kk]\s*[-~至]+\s*(\d+(?:\.\d+)?)\s*[Kk]", x.get("salary"))
+                        if m: smin=int(float(m.group(1))*1000); smax=int(float(m.group(2))*1000)
                     norm.append({
                         "title": title,
                         "company_name": x.get("company_name"),
