@@ -44,14 +44,20 @@ def meta():
         "token": "yxqqnn0000000006 (public)"
     }
 
-# Serve frontend static if built
+# Serve frontend static if built — SPA fallback (careers / jobfairs 分栏)
 FRONT_DIST = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "dist"
 if FRONT_DIST.exists():
-    app.mount("/", StaticFiles(directory=str(FRONT_DIST), html=True), name="frontend")
-
     @app.get("/{full_path:path}")
     def spa_fallback(full_path: str):
+        # 1. 静态资源直接返回
         file = FRONT_DIST / full_path
-        if file.exists() and file.is_file():
+        if full_path and file.exists() and file.is_file():
             return FileResponse(str(file))
-        return FileResponse(str(FRONT_DIST / "index.html"))
+        # 2. API 已在上方匹配，剩余前端路由全部回 index.html（支持 /careers /jobfairs）
+        index = FRONT_DIST / "index.html"
+        if index.exists():
+            return FileResponse(str(index))
+        return {"detail": "frontend not built"}
+
+    # 静态资源兜底（assets 等）
+    app.mount("/", StaticFiles(directory=str(FRONT_DIST), html=True), name="frontend")
