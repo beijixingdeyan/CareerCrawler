@@ -3,6 +3,8 @@
 > **Slogan：爬取机会，洞察未来**
 > 湖南科技大学 · 计算机科学与工程学院 2027届专场定制版 · 对接真实就业网 `jy.hnust.edu.cn` · 开箱可用、离线可演示、可一键部署 · 无隐私信息
 
+> **GitHub：** `https://github.com/beijixingdeyan/CareerCrawler` · `git clone https://github.com/beijixingdeyan/CareerCrawler.git`
+
 [![Python](https://img.shields.io/badge/Python-3.12-blue)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18-61dafb)](https://react.dev)
