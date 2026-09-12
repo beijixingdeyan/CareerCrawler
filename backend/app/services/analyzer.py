@@ -41,9 +41,9 @@ def salary_stats(jobs: List[dict]) -> dict:
         "distribution": dict(Counter([ f"{int(v//1000)}k" for v in vals]))
     }
 
-def industry_distribution(jobs: List[dict]) -> dict:
+def industry_distribution(jobs: List[dict], top_n: int = 12) -> dict:
     c = Counter([j.get("category") or "其他" for j in jobs])
-    return dict(c.most_common())
+    return dict(c.most_common(top_n))
 
 SKILL_KEYWORDS = ["Java","Python","C++","Go","JavaScript","TypeScript","Vue","React","SpringBoot","Spring","MySQL","Redis","Docker","Kubernetes","Linux","机器学习","深度学习","算法","大数据","Hadoop","Spark","Flink","Android","iOS","前端","后端","测试","运维","网络安全","渗透","C#","Node.js","Django","Flask","TensorFlow","PyTorch"]
 
