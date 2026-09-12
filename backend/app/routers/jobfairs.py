@@ -169,14 +169,23 @@ def fair_30003_companies(industry: Optional[str] = None, enrich: int = Query(0, 
         # 走通用富化逻辑，支持行业筛选
         res = fair_companies("30003", enrich=1, refresh=refresh, industry=industry)
         return res
+    KNOWN = {"制造业","教育","信息传输、软件和信息技术服务业","建筑业","批发和零售业","电力、热力、燃气及水生产和供应业","采矿业","科学研究和技术服务业","交通运输、仓储和邮政业","农、林、牧、渔业","住宿和餐饮业","文化、体育和娱乐业","金融业","水利、环境和公共设施管理业","公共管理、社会保障和社会组织","租赁和商务服务业"}
+    def _match(ind):
+        return ind or ""
     data = _load_fair("30003")
     if data is None:
         raw = fetch_fair_companies_raw("30003")
         if industry:
-            raw = [c for c in raw if industry in (c.get("industry_category") or "")]
+            if industry in ("其它","其他"):
+                raw = [c for c in raw if _match(c.get("industry_category")) not in KNOWN]
+            else:
+                raw = [c for c in raw if industry in _match(c.get("industry_category"))]
         return {"fair_id":"30003","title":"湖南科技大学2027届计算机类毕业生专场招聘会","total": len(raw), "companies": raw, "source": f"{BASE}/module/list_jobfair_company?fair_id=30003", "note": "raw list, enriched available via /30003/companies?enrich=1"}
     if industry:
-        data = [c for c in data if industry in (c.get("industry_category") or c.get("enterprise_background",{}).get("industry") or "")]
+        if industry in ("其它","其他"):
+            data = [c for c in data if _match(c.get("industry_category") or c.get("enterprise_background",{}).get("industry")) not in KNOWN]
+        else:
+            data = [c for c in data if industry in _match(c.get("industry_category") or c.get("enterprise_background",{}).get("industry"))]
     return {"fair_id":"30003","title":"湖南科技大学2027届计算机类毕业生专场招聘会","total": len(data), "companies": data, "source": f"{BASE}/module/list_jobfair_company?fair_id=30003"}
 
 @router.get("/{fair_id}/companies")
@@ -187,12 +196,17 @@ def fair_companies(fair_id: str, enrich: int = Query(0, ge=0, le=1), refresh: in
     if fair_id=="30003" and cache_path.exists() is False and pathlib.Path("data/real/fair30003_64.json").exists():
         # 兼容旧命名
         import shutil; shutil.copy("data/real/fair30003_64.json", str(cache_path))
+    KNOWN2 = {"制造业","教育","信息传输、软件和信息技术服务业","建筑业","批发和零售业","电力、热力、燃气及水生产和供应业","采矿业","科学研究和技术服务业","交通运输、仓储和邮政业","农、林、牧、渔业","住宿和餐饮业","文化、体育和娱乐业","金融业","水利、环境和公共设施管理业","公共管理、社会保障和社会组织","租赁和商务服务业"}
+    def _m2(ind): return ind or ""
     if cache_path.exists() and refresh==0 and enrich==1:
         try:
             data=json.loads(cache_path.read_text(encoding="utf-8"))
             if data and isinstance(data[0], dict) and "job_detail" in data[0]:
                 if industry:
-                    data = [c for c in data if industry in (c.get("industry_category") or "")]
+                    if industry in ("其它","其他"):
+                        data = [c for c in data if _m2(c.get("industry_category")) not in KNOWN2]
+                    else:
+                        data = [c for c in data if industry in _m2(c.get("industry_category"))]
                 return {"fair_id": fair_id, "total": len(data), "companies": data, "source": f"{BASE}/module/list_jobfair_company?fair_id={fair_id}", "cached": True, "enriched": True}
         except:
             pass
@@ -202,13 +216,19 @@ def fair_companies(fair_id: str, enrich: int = Query(0, ge=0, le=1), refresh: in
             try:
                 raw=json.loads(cached_raw.read_text(encoding="utf-8"))
                 if industry:
-                    raw = [c for c in raw if industry in (c.get("industry_category") or "")]
+                    if industry in ("其它","其他"):
+                        raw = [c for c in raw if _m2(c.get("industry_category")) not in KNOWN2]
+                    else:
+                        raw = [c for c in raw if industry in _m2(c.get("industry_category"))]
                 return {"fair_id": fair_id, "total": len(raw), "companies": raw, "source": f"{BASE}/module/list_jobfair_company?fair_id={fair_id}", "cached": True, "enriched": False}
             except:
                 pass
         raw = fetch_fair_companies_raw(fair_id)
         if industry:
-            raw = [c for c in raw if industry in (c.get("industry_category") or "")]
+            if industry in ("其它","其他"):
+                raw = [c for c in raw if _m2(c.get("industry_category")) not in KNOWN2]
+            else:
+                raw = [c for c in raw if industry in _m2(c.get("industry_category"))]
         try:
             pathlib.Path("data/real").mkdir(parents=True, exist_ok=True)
             pathlib.Path(f"data/real/fair_{fair_id}_raw.json").write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -218,7 +238,10 @@ def fair_companies(fair_id: str, enrich: int = Query(0, ge=0, le=1), refresh: in
     else:
         raw = fetch_fair_companies_raw(fair_id)
         if industry:
-            raw = [c for c in raw if industry in (c.get("industry_category") or "")]
+            if industry in ("其它","其他"):
+                raw = [c for c in raw if _m2(c.get("industry_category")) not in KNOWN2]
+            else:
+                raw = [c for c in raw if industry in _m2(c.get("industry_category"))]
         enriched=[]
         for c in raw:
             enriched.append(enrich_one(c))

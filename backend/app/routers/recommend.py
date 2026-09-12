@@ -74,12 +74,20 @@ def _load_jobs(db: Session, clicked_fair_ids: List[str] = []):
 @router.post("")
 def recommend(profile: UserProfile, limit: int = 1000, page: int = 1, page_size: int = 12, industry: Optional[str] = None, db: Session = Depends(get_db)):
     jobs = _load_jobs(db, clicked_fair_ids=profile.clicked_fair_ids or [])
-    # 行业筛选（如制造业/教育等），对推荐池先过滤
+    KNOWN = {"制造业","教育","信息传输、软件和信息技术服务业","建筑业","批发和零售业","电力、热力、燃气及水生产和供应业","采矿业","科学研究和技术服务业","交通运输、仓储和邮政业","农、林、牧、渔业","住宿和餐饮业","文化、体育和娱乐业","金融业","水利、环境和公共设施管理业","公共管理、社会保障和社会组织","租赁和商务服务业"}
     if industry:
-        jobs = [j for j in jobs if industry in (j.get("industry") or "")]
+        if industry in ("其它","其他"):
+            jobs = [j for j in jobs if (j.get("industry") or "") not in KNOWN]
+        else:
+            jobs = [j for j in jobs if industry in (j.get("industry") or "")]
     elif profile.preferred_industries:
         pref = set(profile.preferred_industries)
-        jobs = [j for j in jobs if any(p in (j.get("industry") or "") for p in pref)] if pref else jobs
+        has_other = any(p in ("其它","其他") for p in pref)
+        if has_other:
+            # 其它表示未归类
+            jobs = [j for j in jobs if any(p in (j.get("industry") or "") for p in pref if p not in ("其它","其他")) or (j.get("industry") or "") not in KNOWN]
+        else:
+            jobs = [j for j in jobs if any(p in (j.get("industry") or "") for p in pref)] if pref else jobs
     user_dict = profile.model_dump()
     if user_dict["skills"] and isinstance(user_dict["skills"][0], str):
         user_dict["skills"] = [{"name": s} for s in user_dict["skills"]]

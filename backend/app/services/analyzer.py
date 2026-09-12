@@ -41,9 +41,17 @@ def salary_stats(jobs: List[dict]) -> dict:
         "distribution": dict(Counter([ f"{int(v//1000)}k" for v in vals]))
     }
 
-def industry_distribution(jobs: List[dict], top_n: int = 16) -> dict:
-    # 按宣讲会/双选会统一的16行业划分（制造业/教育/信息传输等），不展示岗位标题细类
-    c = Counter([j.get("industry") or j.get("industry_category") or j.get("category") or "其他" for j in jobs])
+def industry_distribution(jobs: List[dict], top_n: int = 17) -> dict:
+    KNOWN = {"制造业","教育","信息传输、软件和信息技术服务业","建筑业","批发和零售业","电力、热力、燃气及水生产和供应业","采矿业","科学研究和技术服务业","交通运输、仓储和邮政业","农、林、牧、渔业","住宿和餐饮业","文化、体育和娱乐业","金融业","水利、环境和公共设施管理业","公共管理、社会保障和社会组织","租赁和商务服务业"}
+    def _norm(ind):
+        if not ind: return "其它"
+        if ind in KNOWN: return ind
+        # 模糊：若包含关键词则归到已知，否则其它
+        for k in KNOWN:
+            if k in ind or ind in k:
+                return k
+        return "其它"
+    c = Counter([_norm(j.get("industry") or j.get("industry_category") or j.get("category") or "") for j in jobs])
     return dict(c.most_common(top_n))
 
 SKILL_KEYWORDS = ["Java","Python","C++","Go","JavaScript","TypeScript","Vue","React","SpringBoot","Spring","MySQL","Redis","Docker","Kubernetes","Linux","机器学习","深度学习","算法","大数据","Hadoop","Spark","Flink","Android","iOS","前端","后端","测试","运维","网络安全","渗透","C#","Node.js","Django","Flask","TensorFlow","PyTorch"]
