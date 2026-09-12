@@ -72,7 +72,7 @@ def _load_jobs(db: Session, clicked_fair_ids: List[str] = []):
     return out
 
 @router.post("")
-def recommend(profile: UserProfile, limit: int = 500, page: int = 1, page_size: int = 12, industry: Optional[str] = None, db: Session = Depends(get_db)):
+def recommend(profile: UserProfile, limit: int = 1000, page: int = 1, page_size: int = 12, industry: Optional[str] = None, db: Session = Depends(get_db)):
     jobs = _load_jobs(db, clicked_fair_ids=profile.clicked_fair_ids or [])
     # 行业筛选（如制造业/教育等），对推荐池先过滤
     if industry:

@@ -3,7 +3,7 @@ import { api, Job } from '../api/client'
 
 type Preset = { major:string; degree:string; skills:string[]; preferred_cities:string[]; preferred_categories:string[] }
 
-const INDUSTRIES = ["全部","制造业","教育","信息传输、软件和信息技术服务业","建筑业","批发和零售业","科学研究和技术服务业"]
+const INDUSTRIES = ["全部","制造业","教育","信息传输、软件和信息技术服务业","建筑业","批发和零售业","电力、热力、燃气及水生产和供应业","采矿业","科学研究和技术服务业","交通运输、仓储和邮政业","农、林、牧、渔业","住宿和餐饮业","文化、体育和娱乐业","金融业","水利、环境和公共设施管理业","公共管理、社会保障和社会组织"]
 export default function Recommend(){
   const [presets, setPresets] = useState<Record<string, Preset> | null>(null)
   const [form, setForm] = useState<Preset & {preferred_industries?: string[]}>({ major:'计算机科学与技术', degree:'本科', skills:['Java','Python','Vue','SpringBoot','MySQL'], preferred_cities:['长沙','深圳'], preferred_categories:['技术开发'], preferred_industries: [] } as any)
@@ -26,7 +26,7 @@ export default function Recommend(){
     try{ clicked = JSON.parse(localStorage.getItem('clicked_fair_ids')||'[]') }catch{}
     const payload:any = { ...form, clicked_fair_ids: clicked, preferred_industries: industry==='全部'? [] : [industry] }
     if(industry!=='全部') payload.preferred_industries=[industry]
-    const r = await api.post(`/api/recommend?limit=500&page=${p}&page_size=${pageSize}${industry!=='全部'?'&industry='+encodeURIComponent(industry):''}`, payload)
+    const r = await api.post(`/api/recommend?limit=1000&page=${p}&page_size=${pageSize}${industry!=='全部'?'&industry='+encodeURIComponent(industry):''}`, payload)
     setResult(r.data)
     setLoading(false)
   }
@@ -61,7 +61,7 @@ export default function Recommend(){
           <div style={{display:'flex', alignItems:'end'}}><button onClick={()=>{ setPage(1); submit(1)}} style={{padding:'10px 18px', borderRadius:10, background:'#1E55AF', color:'#fff', border:'none', fontWeight:800, width:'100%'}}>{loading?'推荐中…':'生成推荐'}</button></div>
         </div>
       </div>
-      <div style={{fontSize:12, color:'#64748b', textAlign:'center'}}>共 {result?.total ?? result?.recommendations?.length ?? 0} 条推荐 · 池 {result?.total_pool ?? 0}（宣讲会500 + 已点双选会）· 第 {result?.page ?? page} / {Math.max(1, Math.ceil((result?.total ?? 0)/pageSize))} 页</div>
+      <div style={{fontSize:12, color:'#64748b', textAlign:'center'}}>共 {result?.total ?? 0} 条推荐（池 {result?.total_pool ?? 0}：宣讲会500 + 已点双选会{ (result?.total_pool ?? 0) - 500 }）· 第 {result?.page ?? page} / {Math.max(1, Math.ceil((result?.total ?? 0)/pageSize))} 页 {result?.total !== result?.total_pool ? '· 已按行业/去重筛选' : ''}</div>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:12}}>
         {result?.recommendations.map((job:any)=>(
           <div key={job.id} style={{background:'#fff', borderRadius:16, padding:14, boxShadow:'0 4px 20px rgba(0,0,0,0.06)', display:'grid', gap:8}}>

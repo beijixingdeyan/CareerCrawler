@@ -22,13 +22,13 @@ def _is_expired(item: dict) -> bool:
     raw_inner = item.get("raw") or {}
     if raw_inner.get("overdue") is True:
         return True
-    # 2) publish_time 超 30 天即视为失效（主要过滤旧招聘）
+    # 2) publish_time 超 14 天即视为失效（仅保留近2周，过滤失效链接）
     raw = item.get("publish_time") or item.get("publish_date") or item.get("meet_day") or ""
     if raw:
         try:
             dt = datetime.datetime.fromisoformat(str(raw).split(" ")[0])
             today = datetime.datetime(2026, 9, 12)
-            cutoff = today - datetime.timedelta(days=30)
+            cutoff = today - datetime.timedelta(days=14)
             if dt < cutoff:
                 return True
         except:

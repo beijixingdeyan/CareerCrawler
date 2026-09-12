@@ -49,11 +49,11 @@ def recommend_for_user(user: dict, jobs: List[dict], limit=20) -> List[dict]:
         scored.append((score, j))
 
     scored.sort(key=lambda x: x[0], reverse=True)
-    # 去重按公司+标题
+    # 去重按 id（career-xxx / fair-xxx-xxx 唯一），不按公司+标题误删
     seen = set()
     out = []
     for s, j in scored:
-        key = (j["company_name"], j["title"])
+        key = j.get("id") or (j["company_name"], j["title"])
         if key in seen:
             continue
         seen.add(key)
