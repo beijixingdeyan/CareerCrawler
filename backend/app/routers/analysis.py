@@ -52,6 +52,8 @@ def _load_jobs(db: Session):
                         "title": title,
                         "company_name": x.get("company_name"),
                         "category": x.get("category") or (x.get("raw") or {}).get("category") or x.get("industry_category") or (x.get("raw") or {}).get("industry_category") or "其他",
+                        "industry": x.get("industry") or x.get("industry_category") or (x.get("raw") or {}).get("industry_category") or x.get("category") or "其他",
+                        "industry_category": x.get("industry_category") or (x.get("raw") or {}).get("industry_category") or x.get("category") or "其他",
                         "skills": x.get("skills") or [],
                         "salary_min": smin,
                         "salary_max": smax,
