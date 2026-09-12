@@ -122,7 +122,9 @@ def list_jobs(
             ql = q.lower()
             filtered = [x for x in filtered if ql in (x.get("title","")+x.get("company_name","")+x.get("description","")).lower()]
         if category:
-            filtered = [x for x in filtered if x.get("category")==category]
+            # 兼容 raw 中的分类
+            def _cat(y): return y.get("category") or (y.get("raw") or {}).get("category") or y.get("industry_category") or (y.get("raw") or {}).get("industry_category") or "其他"
+            filtered = [x for x in filtered if _cat(x)==category]
         if city:
             filtered = [x for x in filtered if city in (x.get("location") or x.get("location_raw") or x.get("location_city") or "")]
         if skill:
@@ -155,7 +157,7 @@ def list_jobs(
                 "id": x.get("hash") or x.get("id") or x.get("publish_id") or x.get("career_talk_id") or x.get("fair_id") or x.get("detail_url","")[-12:] or str(hash(title))[-8:],
                 "title": title,
                 "company_name": comp,
-                "category": x.get("category") or x.get("industry_category") or "其他",
+                "category": x.get("category") or (x.get("raw") or {}).get("category") or x.get("industry_category") or (x.get("raw") or {}).get("industry_category") or x.get("raw",{}).get("category") or "其他",
                 "job_type": x.get("source_type") or ("careers" if x.get("career_talk_id") else "jobs"),
                 "description": x.get("description") or x.get("about_major") or x.get("professionals") or "",
                 "skills": x.get("skills") or [],

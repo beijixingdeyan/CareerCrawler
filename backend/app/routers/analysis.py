@@ -51,7 +51,7 @@ def _load_jobs(db: Session):
                     norm.append({
                         "title": title,
                         "company_name": x.get("company_name"),
-                        "category": x.get("category") or x.get("industry_category") or "其他",
+                        "category": x.get("category") or (x.get("raw") or {}).get("category") or x.get("industry_category") or (x.get("raw") or {}).get("industry_category") or "其他",
                         "skills": x.get("skills") or [],
                         "salary_min": smin,
                         "salary_max": smax,
