@@ -3,9 +3,11 @@ import { api, Job } from '../api/client'
 
 type Preset = { major:string; degree:string; skills:string[]; preferred_cities:string[]; preferred_categories:string[] }
 
+const INDUSTRIES = ["全部","制造业","教育","信息传输、软件和信息技术服务业","建筑业","批发和零售业","科学研究和技术服务业"]
 export default function Recommend(){
   const [presets, setPresets] = useState<Record<string, Preset> | null>(null)
-  const [form, setForm] = useState<Preset>({ major:'计算机科学与技术', degree:'本科', skills:['Java','Python','Vue','SpringBoot','MySQL'], preferred_cities:['长沙','深圳'], preferred_categories:['技术开发'] })
+  const [form, setForm] = useState<Preset & {preferred_industries?: string[]}>({ major:'计算机科学与技术', degree:'本科', skills:['Java','Python','Vue','SpringBoot','MySQL'], preferred_cities:['长沙','深圳'], preferred_categories:['技术开发'], preferred_industries: [] } as any)
+  const [industry,setIndustry]=useState('全部')
   const [result, setResult] = useState<{recommendations: (Job & {reasons:string[]})[]} | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -18,7 +20,11 @@ export default function Recommend(){
 
   const submit = async () => {
     setLoading(true)
-    const r = await api.post('/api/recommend?limit=12', form)
+    let clicked: string[] = []
+    try{ clicked = JSON.parse(localStorage.getItem('clicked_fair_ids')||'[]') }catch{}
+    const payload:any = { ...form, clicked_fair_ids: clicked, preferred_industries: industry==='全部'? [] : [industry] }
+    if(industry!=='全部') payload.preferred_industries=[industry]
+    const r = await api.post(`/api/recommend?limit=12${industry!=='全部'?'&industry='+encodeURIComponent(industry):''}`, payload)
     setResult(r.data)
     setLoading(false)
   }
@@ -36,6 +42,13 @@ export default function Recommend(){
             <button onClick={()=>setForm(presets.ai_bigdata)} style={btn}>大数据/AI</button>
           </div>
         )}
+        <div style={{marginTop:10, display:'flex', gap:6, flexWrap:'wrap', alignItems:'center'}}>
+          <span style={{fontSize:12, color:'#475569'}}>行业筛选：</span>
+          {INDUSTRIES.map(ind=>(
+            <button key={ind} onClick={()=>setIndustry(ind)} style={{padding:'6px 12px', borderRadius:999, border: industry===ind?'1px solid #1E55AF':'1px solid #e2e8f0', background: industry===ind?'#1E55AF':'#fff', color: industry===ind?'#fff':'#475569', fontSize:12, fontWeight:600}}>{ind}</button>
+          ))}
+        </div>
+        <div style={{fontSize:11, color:'#64748b', marginTop:6}}>推荐池已包含 <b>宣讲会 500</b> + <b>已点双选会企业</b>（点击双选会卡片即记录，当前已记录 {(() => { try{ return JSON.parse(localStorage.getItem('clicked_fair_ids')||'[]').length }catch{ return 0 } })()} 场），按行业/技能/城市/类别加权，无虚假数据</div>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginTop:12}}>
           <Field label="专业"><input value={form.major} onChange={e=>setForm({...form, major:e.target.value})} style={inp} /></Field>
           <Field label="学历"><input value={form.degree} onChange={e=>setForm({...form, degree:e.target.value})} style={inp} /></Field>
@@ -47,13 +60,13 @@ export default function Recommend(){
       </div>
 
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:12}}>
-        {result?.recommendations.map(job=>(
+        {result?.recommendations.map((job:any)=>(
           <div key={job.id} style={{background:'#fff', borderRadius:16, padding:14, boxShadow:'0 4px 20px rgba(0,0,0,0.06)', display:'grid', gap:8}}>
             <div style={{fontWeight:800}}>{job.title}</div>
-            <div style={{fontSize:13, color:'#334155'}}>{job.company_name} · {job.category} {job._score ? <span style={{background:'#eef2ff', color:'#1E55AF', padding:'2px 8px', borderRadius:999, fontSize:11, marginLeft:6}}>匹配 {job._score}</span> : null}</div>
+            <div style={{fontSize:13, color:'#334155'}}>{job.company_name} · {job.category} {job.industry ? <span style={{background:'#fef3c7', padding:'2px 6px', borderRadius:999, fontSize:11, marginLeft:6}}>{job.industry}</span> : null} {job._score ? <span style={{background:'#eef2ff', color:'#1E55AF', padding:'2px 8px', borderRadius:999, fontSize:11, marginLeft:6}}>匹配 {job._score}</span> : null}</div>
             <div style={{fontSize:12, color:'#475569'}}>📍 {job.location_city || job.location_raw || '待定'} · 💰 {job.salary_raw || (job.salary_min? `${job.salary_min}-${job.salary_max}`:'面议')}</div>
             <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
-              {(job.skills||[]).slice(0,4).map(s=><span key={s.name} style={{background:'#f1f5f9', padding:'4px 8px', borderRadius:999, fontSize:11}}>{s.name}</span>)}
+              {(job.skills||[]).slice(0,4).map((s:any)=><span key={s.name} style={{background:'#f1f5f9', padding:'4px 8px', borderRadius:999, fontSize:11}}>{s.name}</span>)}
             </div>
             <div style={{fontSize:12, color:'#0ea5e9'}}>{job.reasons?.join(' · ')}</div>
             {job.source_url && <a href={job.source_url} target="_blank" rel="noreferrer" style={{fontSize:12, color:'#1E55AF'}}>溯源链接 →</a>}

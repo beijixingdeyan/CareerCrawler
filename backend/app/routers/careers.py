@@ -17,6 +17,7 @@ def _load_careers():
 def list_careers(
     q: Optional[str] = None,
     city: Optional[str] = None,
+    industry: Optional[str] = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(15, ge=1, le=50),
 ):
@@ -27,6 +28,8 @@ def list_careers(
         filtered = [x for x in filtered if ql in (x.get("title","")+x.get("company_name","")+x.get("description","")).lower()]
     if city:
         filtered = [x for x in filtered if city in (x.get("job_city") or x.get("location") or "")]
+    if industry:
+        filtered = [x for x in filtered if industry in (x.get("enterprise_background",{}).get("industry","") or x.get("industry") or x.get("industry_category") or "")]
     total = len(filtered)
     start = (page-1)*page_size
     items = filtered[start:start+page_size]

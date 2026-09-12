@@ -164,16 +164,23 @@ def stats():
 
 # 必须放在 /{fair_id} 之前，避免 30003 被当作 fair_id
 @router.get("/30003/companies")
-def fair_30003_companies():
+def fair_30003_companies(industry: Optional[str] = None, enrich: int = Query(0, ge=0, le=1), refresh: int = Query(0, ge=0, le=1)):
+    if enrich==1:
+        # 走通用富化逻辑，支持行业筛选
+        res = fair_companies("30003", enrich=1, refresh=refresh, industry=industry)
+        return res
     data = _load_fair("30003")
     if data is None:
-        # fallback to raw fetch
         raw = fetch_fair_companies_raw("30003")
+        if industry:
+            raw = [c for c in raw if industry in (c.get("industry_category") or "")]
         return {"fair_id":"30003","title":"湖南科技大学2027届计算机类毕业生专场招聘会","total": len(raw), "companies": raw, "source": f"{BASE}/module/list_jobfair_company?fair_id=30003", "note": "raw list, enriched available via /30003/companies?enrich=1"}
+    if industry:
+        data = [c for c in data if industry in (c.get("industry_category") or c.get("enterprise_background",{}).get("industry") or "")]
     return {"fair_id":"30003","title":"湖南科技大学2027届计算机类毕业生专场招聘会","total": len(data), "companies": data, "source": f"{BASE}/module/list_jobfair_company?fair_id=30003"}
 
 @router.get("/{fair_id}/companies")
-def fair_companies(fair_id: str, enrich: int = Query(0, ge=0, le=1), refresh: int = Query(0, ge=0, le=1)):
+def fair_companies(fair_id: str, enrich: int = Query(0, ge=0, le=1), refresh: int = Query(0, ge=0, le=1), industry: Optional[str] = None):
     # 缓存路径
     cache_path = pathlib.Path(f"data/real/fair_{fair_id}.json")
     # 特殊 30003 直接用已富化的 64 份
@@ -181,25 +188,27 @@ def fair_companies(fair_id: str, enrich: int = Query(0, ge=0, le=1), refresh: in
         # 兼容旧命名
         import shutil; shutil.copy("data/real/fair30003_64.json", str(cache_path))
     if cache_path.exists() and refresh==0 and enrich==1:
-        # 已富化则直接返回
         try:
             data=json.loads(cache_path.read_text(encoding="utf-8"))
-            # 判断是否已富化（有 job_detail）
             if data and isinstance(data[0], dict) and "job_detail" in data[0]:
+                if industry:
+                    data = [c for c in data if industry in (c.get("industry_category") or "")]
                 return {"fair_id": fair_id, "total": len(data), "companies": data, "source": f"{BASE}/module/list_jobfair_company?fair_id={fair_id}", "cached": True, "enriched": True}
         except:
             pass
     if enrich==0:
-        # 仅 raw 列表，快速
         cached_raw = pathlib.Path(f"data/real/fair_{fair_id}_raw.json")
         if cached_raw.exists() and refresh==0:
             try:
                 raw=json.loads(cached_raw.read_text(encoding="utf-8"))
+                if industry:
+                    raw = [c for c in raw if industry in (c.get("industry_category") or "")]
                 return {"fair_id": fair_id, "total": len(raw), "companies": raw, "source": f"{BASE}/module/list_jobfair_company?fair_id={fair_id}", "cached": True, "enriched": False}
             except:
                 pass
         raw = fetch_fair_companies_raw(fair_id)
-        # 缓存 raw
+        if industry:
+            raw = [c for c in raw if industry in (c.get("industry_category") or "")]
         try:
             pathlib.Path("data/real").mkdir(parents=True, exist_ok=True)
             pathlib.Path(f"data/real/fair_{fair_id}_raw.json").write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -207,12 +216,12 @@ def fair_companies(fair_id: str, enrich: int = Query(0, ge=0, le=1), refresh: in
             pass
         return {"fair_id": fair_id, "total": len(raw), "companies": raw, "source": f"{BASE}/module/list_jobfair_company?fair_id={fair_id}", "cached": False, "enriched": False}
     else:
-        # 富化：raw -> 逐家抓 detail
         raw = fetch_fair_companies_raw(fair_id)
+        if industry:
+            raw = [c for c in raw if industry in (c.get("industry_category") or "")]
         enriched=[]
         for c in raw:
             enriched.append(enrich_one(c))
-        # 缓存富化
         try:
             cache_path.write_text(json.dumps(enriched, ensure_ascii=False, indent=2), encoding="utf-8")
         except:

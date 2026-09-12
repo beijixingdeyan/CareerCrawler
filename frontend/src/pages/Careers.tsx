@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { Calendar, MapPin, Users, ExternalLink, Search, X, Building2 } from 'lucide-react'
 
+const INDUSTRIES = ["全部","制造业","教育","信息传输、软件和信息技术服务业","建筑业","批发和零售业","电力、热力、燃气及水生产和供应业","采矿业","科学研究和技术服务业","交通运输、仓储和邮政业"]
 export default function Careers(){
   const [q,setQ]=useState('')
+  const [industry,setIndustry]=useState('全部')
   const [page,setPage]=useState(1)
   const [data,setData]=useState<any>({total:0, items:[]})
   const [loading,setLoading]=useState(false)
@@ -12,11 +14,11 @@ export default function Careers(){
 
   const load=async ()=>{
     setLoading(true)
-    const r=await api.get('/api/careers', {params:{q: q||undefined, page, page_size: pageSize}})
+    const r=await api.get('/api/careers', {params:{q: q||undefined, industry: industry==='全部'?undefined:industry, page, page_size: pageSize}})
     setData(r.data)
     setLoading(false)
   }
-  useEffect(()=>{ load() }, [page])
+  useEffect(()=>{ load() }, [page, industry])
   const totalPages=Math.max(1, Math.ceil((data.total||0)/pageSize))
 
   const openCompany=async (name:string)=>{
@@ -41,7 +43,12 @@ export default function Careers(){
           </div>
           <button onClick={()=>{setPage(1); load()}} style={{padding:'8px 16px', borderRadius:10, background:'#1E55AF', color:'#fff', border:'none', fontWeight:700}}>搜索</button>
         </div>
-        <div style={{fontSize:12, color:'#64748b', marginTop:6}}>共 {data.total} 场 · 第 {page}/{totalPages} 页 · 点击公司名看背景</div>
+        <div style={{marginTop:10, display:'flex', gap:6, flexWrap:'wrap'}}>
+          {INDUSTRIES.map(ind=>(
+            <button key={ind} onClick={()=>{setIndustry(ind); setPage(1)}} style={{padding:'6px 12px', borderRadius:999, border: industry===ind?'1px solid #1E55AF':'1px solid #e2e8f0', background: industry===ind?'#1E55AF':'#fff', color: industry===ind?'#fff':'#475569', fontSize:12, fontWeight:600}}>{ind}</button>
+          ))}
+        </div>
+        <div style={{fontSize:12, color:'#64748b', marginTop:6}}>共 {data.total} 场 · 第 {page}/{totalPages} 页 · 行业: {industry} · 点击公司名看背景</div>
       </div>
 
       {companyDetail && (
@@ -75,8 +82,8 @@ export default function Careers(){
       {loading ? <div style={{background:'#fff', padding:20, borderRadius:12}}>加载中…</div> : (
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:10}}>
           {data.items.map((c:any)=>(
-            <div key={c.career_talk_id || c.id} style={{background:'#fff', borderRadius:14, padding:14, boxShadow:'0 4px 20px rgba(0,0,0,0.06)', display:'grid', gap:8}}>
-              <div onClick={()=>openCompany(c.company_name)} style={{fontWeight:700, fontSize:14, color:'#1E55AF', cursor:'pointer', textDecoration:'underline'}}>{c.company_name || c.title}</div>
+            <div key={c.career_talk_id || c.id} onClick={()=>openCompany(c.company_name)} style={{background:'#fff', borderRadius:14, padding:14, boxShadow:'0 4px 20px rgba(0,0,0,0.06)', display:'grid', gap:8, cursor:'pointer', border:'1px solid transparent'}}>
+              <div style={{fontWeight:700, fontSize:14, color:'#1E55AF'}}>{c.company_name || c.title}</div>
               <div style={{fontSize:12, color:'#1E55AF', fontWeight:600}}>{c.title && c.company_name ? c.title : (c.meet_name || '')}</div>
               <div style={{fontSize:12, color:'#64748b', display:'flex', gap:10, flexWrap:'wrap'}}>
                 <span style={{display:'flex', alignItems:'center', gap:4}}><Calendar size={12}/>{c.meet_day || c.publish_time || '—'}</span>
@@ -84,10 +91,7 @@ export default function Careers(){
                 <span style={{display:'flex', alignItems:'center', gap:4}}><Users size={12}/>{c.professionals || '全专业'}</span>
               </div>
               {c.salary && <div style={{fontSize:12, color:'#065f46', background:'#ecfdf5', padding:'4px 8px', borderRadius:999, alignSelf:'start'}}>薪资 {c.salary}</div>}
-              <div style={{display:'flex', gap:8, marginTop:4}}>
-                <button onClick={()=>openCompany(c.company_name)} style={{fontSize:12, color:'#fff', background:'#1E55AF', border:'none', padding:'4px 10px', borderRadius:999, fontWeight:600}}>查看企业背景 →</button>
-                <a href={c.detail_url || `https://jy.hnust.edu.cn/detail/career?id=${c.career_talk_id}`} target="_blank" style={{fontSize:12, color:'#64748b'}}>原帖</a>
-              </div>
+              <div style={{fontSize:12, color:'#1E55AF', fontWeight:600}}>点击卡片查看 单位简介/行业/宣讲信息 →</div>
             </div>
           ))}
         </div>

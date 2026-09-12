@@ -138,11 +138,8 @@ def get_company(name: str, db: Session = Depends(get_db)):
                                         break
                             except:
                                 pass
-                        # official_url: 优先真实抓取，其次企业库真实官网，tianyancha 视为不可用
                         bg_official = bg.get("official_url")
-                        if bg_official and "tianyancha" in bg_official:
-                            bg_official = None
-                        chosen_official = real_official or bg_official or f"https://www.baidu.com/s?wd={name}%20官网"
+                        chosen_official = real_official or bg_official
                         return {
                             "company_name": name,
                             "fair_id": None,
@@ -207,9 +204,9 @@ def get_company(name: str, db: Session = Depends(get_db)):
                             "view_count": x.get("view_count"),
                             "intro": intro_val[:2000],
                             "intro_excerpt": comp_detail.get("intro_excerpt") or intro_val[:300],
-                            "official_url": f"https://www.baidu.com/s?wd={name}%20官网",
-                            "recruitment_url": f"https://jy.hnust.edu.cn/detail/job?id={x.get('publish_id')}",
-                            "source": "双选会原帖单位简介 + 企业主页",
+                            "official_url": None,
+                            "recruitment_url": None,
+                            "source": "双选会原帖",
                         },
                         "job_info": {
                             "job_name": x.get("job_name"),
@@ -229,16 +226,15 @@ def get_company(name: str, db: Session = Depends(get_db)):
                     }
         except:
             continue
-    c = db.query(Company).filter(Company.name == name).first()
-    if c:
-        return {"company_name": c.name, "basic_info": c.basic_info, "risk_assessment": c.risk_assessment, "industry": c.industry, "overall_score": c.overall_score, "research_time": c.research_time}
-    job = db.query(Job).filter(Job.company_name == name).first()
-    ctx = job.description[:400] if job else ""
-    result = research_company(name, ctx)
-    try:
-        new = Company(name=name, industry=result["basic_info"]["industry"], sub_industry=result["basic_info"]["sub_industry"], staff_count_range=result["basic_info"]["staff_count_range"], risk_level=result["risk_assessment"]["risk_level"], risk_score=result["risk_assessment"]["risk_score"], overall_score=str(result["overall_score"]), basic_info=result["basic_info"], risk_assessment=result["risk_assessment"], research_time=result["research_time"])
-        db.add(new)
-        db.commit()
-    except Exception:
-        db.rollback()
-    return result
+    # 无真实数据时不再生成虚假启发式数据
+    return {
+        "company_name": name,
+        "basic_info": {
+            "company_name": name,
+            "industry": "未收录",
+            "intro": "该企业暂未在宣讲会 500 / 双选会已爬取范围及权威大厂库 17 家中收录，暂无真实介绍。请通过宣讲会/双选会卡片查看已爬取企业的真实单位简介。",
+            "source": "未收录（仅展示真实爬取数据，无虚假生成）",
+        },
+        "risk_assessment": {"risk_level": "unknown", "risk_score": None, "suggestion": "未收录企业，建议现场核验资质"},
+        "provenance": {"verified": False, "note": "no fake data"},
+    }

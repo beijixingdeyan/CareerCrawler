@@ -36,6 +36,11 @@ def recommend_for_user(user: dict, jobs: List[dict], limit=20) -> List[dict]:
         city = normalize(j.get("location_city") or j.get("location_raw") or "")
         if any(pc in city for pc in pref_cities):
             score += 0.14
+        # 行业偏好
+        pref_inds = set(normalize(c) for c in (user.get("preferred_industries") or []))
+        ind = normalize(j.get("industry") or "")
+        if pref_inds and any(pi in ind for pi in pref_inds):
+            score += 0.18
         # 薪资（有明确定价的加分）
         if j.get("salary_min"):
             score += 0.05
@@ -69,6 +74,9 @@ def explain_recommendation(user: dict, job: dict) -> List[str]:
     city = job.get("location_city") or job.get("location_raw") or ""
     if any(normalize(c) in normalize(city) for c in (user.get("preferred_cities") or [])):
         reasons.append(f"地点匹配：{city}")
+    ind = job.get("industry") or ""
+    if ind and any(normalize(c) in normalize(ind) for c in (user.get("preferred_industries") or [])):
+        reasons.append(f"行业匹配：{ind}")
     if job.get("salary_min"):
         reasons.append(f"薪资：{job.get('salary_min')}-{job.get('salary_max')}")
     if not reasons:

@@ -15,7 +15,9 @@ export default function Jobfairs(){
   const [cLoading,setCLoading]=useState(false)
   const [cTotal,setCTotal]=useState(0)
   const [companyDetail,setCompanyDetail]=useState<any|null>(null)
+  const [cIndustry,setCIndustry]=useState('全部')
   const pageSize=15
+  const INDUSTRIES = ["全部","制造业","教育","信息传输、软件和信息技术服务业","建筑业","批发和零售业","科学研究和技术服务业"]
 
   const openCompany=async (name:string)=>{
     setCompanyDetail({_loading:true, company_name:name})
@@ -36,6 +38,11 @@ export default function Jobfairs(){
   const openFair=async (fair: Fair)=>{
     const fid = String(fair.fair_id || fair.id || fair.fairId || '')
     if(!fid) return
+    try{
+      const key='clicked_fair_ids'
+      const arr=JSON.parse(localStorage.getItem(key) || '[]')
+      if(!arr.includes(fid)){ arr.push(fid); localStorage.setItem(key, JSON.stringify(arr)) }
+    }catch{}
     setSelected(fair)
     setCLoading(true)
     setCompanies([])
@@ -58,6 +65,7 @@ export default function Jobfairs(){
 
   if(selected){
     const fid = String(selected.fair_id || selected.id)
+    const filteredCompanies = cIndustry==='全部' ? companies : companies.filter((c:any)=>(c.industry_category||'').includes(cIndustry))
     return (
       <div style={{display:'grid', gap:12}}>
         <div style={{background:'#fff', borderRadius:16, padding:14, boxShadow:'0 4px 20px rgba(0,0,0,0.06)', display:'flex', alignItems:'center', gap:10}}>
@@ -93,6 +101,11 @@ export default function Jobfairs(){
         <div style={{background:'#ecfdf5', border:'1px solid #a7f3d0', padding:10, borderRadius:12, fontSize:12, color:'#065f46'}}>
           ✅ 已为本场 <b>{cTotal}</b> 家企业实时爬取：<code>detail/job?id=publish_id</code>（薪资/要求/福利）+ <code>detail/company?id=company_id</code>（工商背景），走 <code>list_jobfair_company?fair_id={fid}</code> 官方接口，结果已缓存 <code>data/real/fair_{fid}.json</code>，零 mock。
         </div>
+        <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+          {INDUSTRIES.map(ind=>(
+            <button key={ind} onClick={()=>setCIndustry(ind)} style={{padding:'6px 12px', borderRadius:999, border: cIndustry===ind?'1px solid #1E55AF':'1px solid #e2e8f0', background: cIndustry===ind?'#1E55AF':'#fff', color: cIndustry===ind?'#fff':'#475569', fontSize:12, fontWeight:600}}>{ind}</button>
+          ))}
+        </div>
 
         {cLoading ? (
           <div style={{background:'#fff', padding:30, borderRadius:12, textAlign:'center'}}>
@@ -102,7 +115,7 @@ export default function Jobfairs(){
           </div>
         ) : (
           <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:10}}>
-            {companies.map((c:any)=>(
+            {filteredCompanies.map((c:any)=>(
               <div key={c.publish_id || c.company_name} onClick={()=>openCompany(c.company_name)} style={{background:'#fff', borderRadius:14, padding:14, boxShadow:'0 4px 20px rgba(0,0,0,0.06)', display:'grid', gap:6, border:'1px solid #a7f3d0', cursor:'pointer'}}>
                 <div style={{fontWeight:700, display:'flex', alignItems:'center', gap:6}}><Building2 size={14}/> {c.company_name}</div>
                 <div style={{fontSize:13, color:'#1E55AF', fontWeight:600}}>{c.job_name}</div>
@@ -113,15 +126,10 @@ export default function Jobfairs(){
                   <span style={{fontSize:12, background:'#fef3c7', padding:'2px 8px', borderRadius:999}}>{c.job_number ? `${c.job_number}人` : ''}</span>
                 </div>
                 {c.benefits?.length>0 && <div style={{fontSize:12, color:'#065f46', display:'flex', gap:6, flexWrap:'wrap'}}>{c.benefits.slice(0,3).map((b:string)=><span key={b} style={{background:'#eef2ff', padding:'2px 8px', borderRadius:999}}>{b}</span>)}</div>}
-                {c.requirements && <div style={{fontSize:12, color:'#334155', background:'#f8fafc', padding:8, borderRadius:8, maxHeight:80, overflow:'auto', whiteSpace:'pre-wrap'}}><b>要求：</b>{c.requirements.slice(0,240)}</div>}
-                {c.company_detail?.intro_excerpt && <div style={{fontSize:12, color:'#475569', background:'#f8fafc', padding:8, borderRadius:8, maxHeight:80, overflow:'auto'}}><Sparkles size={12}/> {c.company_detail.intro_excerpt.slice(0,180)}</div>}
-                <div style={{display:'flex', gap:8}}>
-                  <a href={c.job_detail?.detail_url || `https://jy.hnust.edu.cn/detail/job?id=${c.publish_id}`} target="_blank" style={{fontSize:12, color:'#1E55AF', display:'flex', alignItems:'center', gap:4}}>岗位原帖 <ExternalLink size={12}/></a>
-                  <a href={c.company_detail?.detail_url || `https://jy.hnust.edu.cn/detail/company?id=${c.company_id}`} target="_blank" style={{fontSize:12, color:'#1E55AF'}}>企业主页</a>
-                </div>
+                <div style={{fontSize:12, color:'#1E55AF', fontWeight:600}}>点击卡片查看 要求/福利/企业介绍 →</div>
               </div>
             ))}
-            {!cLoading && companies.length===0 && <div style={{color:'#64748b', gridColumn:'1/-1', textAlign:'center', padding:20}}>该场暂无参会企业或接口返回为空</div>}
+            {!cLoading && filteredCompanies.length===0 && <div style={{color:'#64748b', gridColumn:'1/-1', textAlign:'center', padding:20}}>该行业暂无企业（当前筛选：{cIndustry}）</div>}
           </div>
         )}
       </div>

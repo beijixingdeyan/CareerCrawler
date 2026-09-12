@@ -102,14 +102,10 @@ for c in careers:
             intro = f"{name}是智能制造领域的重要企业，拥有现代化生产基地与完善供应链，产品远销海内外。"
         else:
             intro = f"{name}是一家在行业内具有影响力的企业，主营业务稳健发展，注重人才培养与技术创新，与湖南科技大学等高校保持紧密合作。"
-        official = known_official.get(name) or f"https://www.{re.sub(r'[^a-zA-Z0-9]', '', name[:6]).lower()}.com"
-        # 尝试更真实的官网
-        if "有限公司" in name:
-            # 用天眼查风格链接兜底
-            official = f"https://www.tianyancha.com/company/{name}"
+        official = known_official.get(name)
         products = "—"
         recruitment = f"https://jy.hnust.edu.cn/detail/career?id={c.get('career_talk_id')}"
-        source = "企业官网 / 天眼查 / Fortune中国500强2024（合成）"
+        source = "企业官网 / Fortune中国500强2024（合成）" if official else "宣讲会原帖 / Fortune中国500强2024（合成）"
 
     enriched_item = {
         **c,  # 保留原始宣讲会字段（career_talk_id, meet_day, address等）
