@@ -20,49 +20,8 @@ class UserProfile(BaseModel):
 
 def _load_jobs(db: Session, clicked_fair_ids: List[str] = []):
     out = []
-    # 1) 真实岗位：优先读 DB，其次 data/real/jobs.json，再回落样本（均为真实爬取，无 mock）
-    jobs_db = db.query(Job).all()
-    if jobs_db:
-        for j in jobs_db:
-            out.append({
-                "id": j.id,
-                "title": j.title,
-                "company_name": j.company_name,
-                "category": j.category,
-                "skills": j.skills or [],
-                "salary_min": j.salary_min,
-                "salary_max": j.salary_max,
-                "location_city": j.location_city,
-                "location_raw": j.location_raw,
-                "source_url": j.source_url,
-                "description": j.description,
-                "industry": j.industry if hasattr(j, 'industry') else None,
-            })
-    else:
-        # 尝试 data/real 真实文件
-        for p in [pathlib.Path("data/real/jobs.json"), pathlib.Path("data/samples/crawl_latest.json"), pathlib.Path("data/samples/hnust_sample.json")]:
-            if p.exists():
-                try:
-                    data=json.loads(p.read_text(encoding="utf-8"))
-                    for x in data:
-                        if isinstance(x, dict) and x.get("title"):
-                            out.append({
-                                "id": x.get("hash") or x.get("id") or x.get("detail_url",""),
-                                "title": x.get("title"),
-                                "company_name": x.get("company_name"),
-                                "category": x.get("category"),
-                                "skills": x.get("skills") or [],
-                                "salary_min": (x.get("salary_parsed") or {}).get("min") or x.get("salary_min"),
-                                "salary_max": (x.get("salary_parsed") or {}).get("max") or x.get("salary_max"),
-                                "location_city": (x.get("location_normalized") or {}).get("city") or x.get("location_city") or x.get("location"),
-                                "location_raw": x.get("location") or x.get("location_raw"),
-                                "source_url": x.get("detail_url") or x.get("source_url"),
-                                "description": x.get("description"),
-                                "industry": x.get("industry") or x.get("industry_category"),
-                            })
-                    if out:
-                        break
-                except: pass
+    # 智能推荐池 = 宣讲会500 + 已点击双选会企业（不含岗位广场的 695 岗位，避免失效信息污染）
+    # 1) 保留岗位广场逻辑但推荐中不混入，避免失效；如需可后续按需加入已过滤的 jobs
     # 2) 宣讲会 500（真实）：每场转为可推荐条目，行业来自 enterprise_background
     try:
         for p in [pathlib.Path("data/real/careers_enriched.json"), pathlib.Path("data/real/careers.json")]:
@@ -113,22 +72,25 @@ def _load_jobs(db: Session, clicked_fair_ids: List[str] = []):
     return out
 
 @router.post("")
-def recommend(profile: UserProfile, limit: int = 12, industry: Optional[str] = None, db: Session = Depends(get_db)):
+def recommend(profile: UserProfile, limit: int = 500, page: int = 1, page_size: int = 12, industry: Optional[str] = None, db: Session = Depends(get_db)):
     jobs = _load_jobs(db, clicked_fair_ids=profile.clicked_fair_ids or [])
     # 行业筛选（如制造业/教育等），对推荐池先过滤
     if industry:
         jobs = [j for j in jobs if industry in (j.get("industry") or "")]
     elif profile.preferred_industries:
-        # 若用户已选偏好行业，则过滤
         pref = set(profile.preferred_industries)
         jobs = [j for j in jobs if any(p in (j.get("industry") or "") for p in pref)] if pref else jobs
     user_dict = profile.model_dump()
     if user_dict["skills"] and isinstance(user_dict["skills"][0], str):
         user_dict["skills"] = [{"name": s} for s in user_dict["skills"]]
-    recs = recommend_for_user(user_dict, jobs, limit=limit)
-    for r in recs:
+    # 先对全量池做推荐排序（取 limit=全量，再分页）
+    recs_all = recommend_for_user(user_dict, jobs, limit=limit)
+    for r in recs_all:
         r["reasons"] = explain_recommendation(user_dict, r)
-    return {"user": user_dict, "recommendations": recs, "total_pool": len(jobs)}
+    total = len(recs_all)
+    start = (page-1)*page_size
+    recs = recs_all[start:start+page_size]
+    return {"user": user_dict, "recommendations": recs, "total": total, "total_pool": len(jobs), "page": page, "page_size": page_size}
 
 @router.get("/presets")
 def presets():

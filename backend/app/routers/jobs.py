@@ -16,11 +16,41 @@ SAMPLE_PATHS = [
     pathlib.Path("data/samples/hnust_sample.json"),
 ]
 
+def _is_expired(item: dict) -> bool:
+    import datetime
+    # 1) overdue 标记
+    raw_inner = item.get("raw") or {}
+    if raw_inner.get("overdue") is True:
+        return True
+    # 2) publish_time 超 30 天即视为失效（主要过滤旧招聘）
+    raw = item.get("publish_time") or item.get("publish_date") or item.get("meet_day") or ""
+    if raw:
+        try:
+            dt = datetime.datetime.fromisoformat(str(raw).split(" ")[0])
+            today = datetime.datetime(2026, 9, 12)
+            cutoff = today - datetime.timedelta(days=30)
+            if dt < cutoff:
+                return True
+        except:
+            pass
+    # 3) end_time 已过也视为失效
+    end = raw_inner.get("end_time") or item.get("end_time") or item.get("deadline") or ""
+    if end:
+        try:
+            dt = datetime.datetime.fromisoformat(str(end).split(" ")[0])
+            today = datetime.datetime(2026, 9, 12)
+            return dt < today
+        except:
+            pass
+    return False
+
 def _load_samples():
     for p in SAMPLE_PATHS:
         if p.exists():
             try:
-                return json.loads(p.read_text(encoding="utf-8"))
+                data = json.loads(p.read_text(encoding="utf-8"))
+                # 直接在这里不过滤，留给调用方按需过滤
+                return data
             except:
                 continue
     return []
@@ -76,12 +106,16 @@ def list_jobs(
         query = query.filter(Job.source_type == source_type)
     # skill 过滤需内存（JSON）
     all_jobs = query.order_by(Job.crawl_time.desc()).all()
+    # 过滤失效
+    all_jobs = [j for j in all_jobs if not _is_expired({"publish_time": j.publish_date or j.crawl_time})]
     if skill:
         all_jobs = [j for j in all_jobs if any(s.get("name") == skill for s in (j.skills or []))]
 
     # 若 DB 为空，返回样本
     if not all_jobs:
         samples = _load_samples()
+        # 先过滤失效招聘（publish_time < 30 天前，及 overdue/end_time 已过期）
+        samples = [x for x in samples if not _is_expired(x)]
         # 对样本做同等过滤
         filtered = samples
         if q:

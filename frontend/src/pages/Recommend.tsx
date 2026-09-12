@@ -8,8 +8,10 @@ export default function Recommend(){
   const [presets, setPresets] = useState<Record<string, Preset> | null>(null)
   const [form, setForm] = useState<Preset & {preferred_industries?: string[]}>({ major:'计算机科学与技术', degree:'本科', skills:['Java','Python','Vue','SpringBoot','MySQL'], preferred_cities:['长沙','深圳'], preferred_categories:['技术开发'], preferred_industries: [] } as any)
   const [industry,setIndustry]=useState('全部')
-  const [result, setResult] = useState<{recommendations: (Job & {reasons:string[]})[]} | null>(null)
+  const [result, setResult] = useState<{recommendations: (Job & {reasons:string[]})[], total?:number, total_pool?:number, page?:number, page_size?:number} | null>(null)
   const [loading, setLoading] = useState(false)
+  const [page,setPage]=useState(1)
+  const pageSize=12
 
   useEffect(()=>{
     api.get('/api/recommend/presets').then(r=>{
@@ -18,17 +20,18 @@ export default function Recommend(){
     })
   },[])
 
-  const submit = async () => {
+  const submit = async (p=page) => {
     setLoading(true)
     let clicked: string[] = []
     try{ clicked = JSON.parse(localStorage.getItem('clicked_fair_ids')||'[]') }catch{}
     const payload:any = { ...form, clicked_fair_ids: clicked, preferred_industries: industry==='全部'? [] : [industry] }
     if(industry!=='全部') payload.preferred_industries=[industry]
-    const r = await api.post(`/api/recommend?limit=12${industry!=='全部'?'&industry='+encodeURIComponent(industry):''}`, payload)
+    const r = await api.post(`/api/recommend?limit=500&page=${p}&page_size=${pageSize}${industry!=='全部'?'&industry='+encodeURIComponent(industry):''}`, payload)
     setResult(r.data)
     setLoading(false)
   }
-  useEffect(()=>{ if(presets) submit() }, [presets])
+  useEffect(()=>{ if(presets) { setPage(1); submit(1) } }, [presets])
+  useEffect(()=>{ if(presets) submit(page) }, [page, industry])
 
   return (
     <div style={{display:'grid', gap:12}}>
@@ -55,10 +58,10 @@ export default function Recommend(){
           <Field label="技能（逗号分隔）"><input value={form.skills.join(',')} onChange={e=>setForm({...form, skills:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} style={inp} /></Field>
           <Field label="偏好城市（逗号）"><input value={form.preferred_cities.join(',')} onChange={e=>setForm({...form, preferred_cities:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} style={inp} /></Field>
           <Field label="偏好类别（逗号）"><input value={form.preferred_categories.join(',')} onChange={e=>setForm({...form, preferred_categories:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} style={inp} /></Field>
-          <div style={{display:'flex', alignItems:'end'}}><button onClick={submit} style={{padding:'10px 18px', borderRadius:10, background:'#1E55AF', color:'#fff', border:'none', fontWeight:800, width:'100%'}}>{loading?'推荐中…':'生成推荐'}</button></div>
+          <div style={{display:'flex', alignItems:'end'}}><button onClick={()=>{ setPage(1); submit(1)}} style={{padding:'10px 18px', borderRadius:10, background:'#1E55AF', color:'#fff', border:'none', fontWeight:800, width:'100%'}}>{loading?'推荐中…':'生成推荐'}</button></div>
         </div>
       </div>
-
+      <div style={{fontSize:12, color:'#64748b', textAlign:'center'}}>共 {result?.total ?? result?.recommendations?.length ?? 0} 条推荐 · 池 {result?.total_pool ?? 0}（宣讲会500 + 已点双选会）· 第 {result?.page ?? page} / {Math.max(1, Math.ceil((result?.total ?? 0)/pageSize))} 页</div>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:12}}>
         {result?.recommendations.map((job:any)=>(
           <div key={job.id} style={{background:'#fff', borderRadius:16, padding:14, boxShadow:'0 4px 20px rgba(0,0,0,0.06)', display:'grid', gap:8}}>
@@ -72,6 +75,11 @@ export default function Recommend(){
             {job.source_url && <a href={job.source_url} target="_blank" rel="noreferrer" style={{fontSize:12, color:'#1E55AF'}}>溯源链接 →</a>}
           </div>
         ))}
+      </div>
+      <div style={{display:'flex', gap:8, justifyContent:'center', marginTop:8}}>
+        <button disabled={(result?.page ?? page) <=1} onClick={()=>setPage(p=>Math.max(1,p-1))} style={{padding:'6px 12px', borderRadius:8, border:'1px solid #e2e8f0', background: (result?.page ?? page)<=1?'#f1f5f9':'#fff'}}>上一页</button>
+        <span style={{padding:'6px 12px', fontSize:12, color:'#64748b'}}>{result?.page ?? page} / {Math.max(1, Math.ceil((result?.total ?? 0)/pageSize))}</span>
+        <button disabled={(result?.page ?? page) >= Math.max(1, Math.ceil((result?.total ?? 0)/pageSize))} onClick={()=>setPage(p=>p+1)} style={{padding:'6px 12px', borderRadius:8, border:'1px solid #e2e8f0', background: (result?.page ?? page) >= Math.max(1, Math.ceil((result?.total ?? 0)/pageSize))?'#f1f5f9':'#fff'}}>下一页</button>
       </div>
     </div>
   )
